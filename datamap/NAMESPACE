@@ -1,0 +1,2 @@
+export(newMap,newMapper,install,uninstall,delete,mapAttach,mapCall,UnboundValue,mappers)
+useDynLib(datamap)

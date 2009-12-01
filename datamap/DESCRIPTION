@@ -1,0 +1,11 @@
+Package: datamap
+Type: Package
+Title: A system for mapping foreign objects to R variables and environments
+Version: 1.0
+Date: 2009-10-30
+Author: Jeffrey Horner <jeffrey.horner@gmail.com>
+Maintainer: Jeffrey Horner <jeffrey.horner@gmail.com>
+Description: datamap utilizes variable bindings and objects of class
+ "UserDefinedDatabase" to provide a simple mapping system to foreign objects.
+License: GPL2
+LazyLoad: yes
