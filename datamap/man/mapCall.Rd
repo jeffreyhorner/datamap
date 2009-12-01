@@ -13,7 +13,7 @@ mapCall(map,funName,...)
 	\item{map}{
 		a datamap object;
 	}
-	\item{.init}{
+	\item{funName}{
 		name of the function to call.
 	}
 	\item{\dots}{

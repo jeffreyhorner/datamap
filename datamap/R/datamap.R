@@ -1,16 +1,19 @@
 Mappers <- new.env(hash=TRUE)
-mappers <- function(){
+mappers <- function(type){
+	if ( !missing(type) ){
+		return(Mappers[[type]])
+	}
 	type <- character()
 	.init <- .get <- .assign <- .delete <- .finalize <- logical()
-	lapply(objects(Mappers,all.names=TRUE),function(mapper){
-		append(type,mapper)
-		append(.init,exists('.init',envir=Mappers[[mapper]],inherits=FALSE))
-		append(.get,exists('.get',envir=Mappers[[mapper]],inherits=FALSE))
-		append(.assign,exists('.assign',envir=Mappers[[mapper]],inherits=FALSE))
-		append(.delete,exists('.delete',envir=Mappers[[mapper]],inherits=FALSE))
-		append(.finalize,exists('.finalize',envir=Mappers[[mapper]],inherits=FALSE))
-	})
-	data.frame(type=type,.init=.init,.get=.init,.delete=.delete,.finalize=.finalize)
+	for(mapper in objects(Mappers,all.names=TRUE)){
+		type <- append(type,mapper)
+		.init <- append(.init,exists('.init',envir=Mappers[[mapper]],inherits=FALSE))
+		.get <- append(.get,exists('.get',envir=Mappers[[mapper]],inherits=FALSE))
+		.assign <- append(.assign,exists('.assign',envir=Mappers[[mapper]],inherits=FALSE))
+		.delete <- append(.delete,exists('.delete',envir=Mappers[[mapper]],inherits=FALSE))
+		.finalize <- append(.finalize,exists('.finalize',envir=Mappers[[mapper]],inherits=FALSE))
+	}
+	data.frame(type=type,.init=.init,.get=.init,.assign=.assign, .delete=.delete,.finalize=.finalize)
 }
 newMapper <- function( type=NULL, .init=NULL, .get=NULL, .assign=NULL, .delete=NULL, .finalize=NULL, ...){
 
@@ -98,11 +101,6 @@ newMapper(
 		# the objects visible to R
 		install(dbListTables(con),map)
 
-		# Argument ... passed to newMap() is placed in the map before
-		# init() is called, so you can lookup any arguments
-		if (exists('lock',map) && get('lock',map) == TRUE)
-			assign('.lock',TRUE,map)
-
 		# Returning FALSE means something has failed
 		return(TRUE)
 	},
@@ -117,6 +115,8 @@ newMapper(
 	.finalize = function() dbDisconnect(con)
 )
 
+# Make R CMD check shut up
+.type <- NULL; .get <- function(x) NULL; .assign <- function(x,y) NULL
 binderGetOnly <- function(val,sym){
 	if (!missing(val))
 		warning(paste("Assignments to",sym,"are not possible with maps of type",.type,"."))
@@ -172,7 +172,7 @@ newMap <- function(type=character(),...) {
 	init <- get('.init',mapper)
 	ret <- try(init(intern,...))
 	if (!is.logical(ret) || ret[1]!=TRUE)
-		stop("init() must return TRUE")
+		stop("init() must return TRUE to instantiate a datamap object.")
 
 	reg.finalizer(map,mapFinalize)
 	return(map)
@@ -252,5 +252,7 @@ mapCall <- function(map,funName,...){
 		stop(paste(funName,"not in map!"))
 	}
 }
+
+internal(map) get('.internal',map)
 
 UnboundValue <- function() .Call('UnboundValue',PACKAGE='datamap')

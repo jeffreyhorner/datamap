@@ -7,7 +7,7 @@
 	\code{newMap} creates the object based on the provided mapper type.
 }
 \usage{
-	newMap( type=NULL, ... )
+	newMap( type=character(), ... )
 }
 \arguments{
 	\item{type}{

@@ -20,7 +20,7 @@ newMapper( type=NULL, .init=NULL, .get=NULL, .assign=NULL, .delete=NULL,
 	\item{.init}{
 		A function whose signature is \code{.init(map,...)} where
 		map is a new map object and \dots are those from
-		\code{newMapper}. Returns TRUE for a successfull initialization
+		the \code{newMap} call. Returns TRUE for a successfull initialization
 		of the map object or FALSE on error.
 	}
 	\item{.get}{
@@ -50,7 +50,7 @@ newMapper( type=NULL, .init=NULL, .get=NULL, .assign=NULL, .delete=NULL,
 		value. NULL is also an acceptible value.
 	}
 	\item{\dots}{
-		Arguments to be passed to \code{.init()}. They MUST be named 
+		Additional objects that are also added to the mapper environment. They MUST be named 
 		arguments, i.e. name=val.
 	}
 }
@@ -61,6 +61,34 @@ newMapper( type=NULL, .init=NULL, .get=NULL, .assign=NULL, .delete=NULL,
 }
 \seealso{
 	\code{\link{newMap}}
+}
+\examples{
+
+# Complete example mapper
+newMapper(
+	type="EXAMPLE",
+	.init=function(map,symbols=c'example',len=3){
+
+		# Install symbols that the users passes in from newMap().
+		lapply(symbols,install,map)
+
+		# Now let's install a len symbol in our map
+		# and also place a len variable in the map
+		install('len',map)
+		assign('len',len,internal(map))
+
+		# Returning FALSE means failure
+		return(TRUE)
+	},
+	.get = function(x) {
+		cat("I'll just get",x,"for you"
+	},
+	.assign = function(x,val) dbWriteTable(con,x,val),
+	.delete = function(x) dbRemoveTable(con,x),
+	.finalize = function() dbDisconnect(con),
+	foo <- 'bar'
+)
+
 }
 \keyword{programming}
 \keyword{environment}
