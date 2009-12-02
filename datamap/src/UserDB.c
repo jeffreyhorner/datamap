@@ -98,8 +98,9 @@ static Rboolean udb_exists(const char * const symstr, Rboolean *canCache, R_Obje
 }
 
 static SEXP udb_get(const char * const name, Rboolean *canCache, R_ObjectTable *udb){
-	SEXP val, intern, map = (SEXP)udb->privateData;
+	SEXP e, fun, val, intern, map = (SEXP)udb->privateData;
 	Rboolean old;
+	int errorOccurred = FALSE;
 
 	if(udb->active == FALSE) return R_UnboundValue;
 	if (symExists(name,map) == FALSE) return R_UnboundValue;
@@ -114,41 +115,30 @@ static SEXP udb_get(const char * const name, Rboolean *canCache, R_ObjectTable *
 		warning("invalid map during get()");
 		return R_NilValue;
 	}
-	val = udb_callWithName(".get", name, intern);
-	UNPROTECT(1);
+	/* fun(name) */
+	PROTECT(fun = findVarInFrame3(intern,install("get"),TRUE));
+
+	if (fun == R_UnboundValue || TYPEOF(fun) != CLOSXP){
+		UNPROTECT(2);
+		warning("%s not found in map.","get");
+		return R_NilValue;
+	}
+	PROTECT(e = allocVector(LANGSXP,2));
+	SETCAR(e, fun);
+	SETCAR(CDR(e), val = NEW_CHARACTER(1));
+	SET_STRING_ELT(val, 0, COPY_TO_USER_STRING(name));
+
+	val = R_tryEval(e, NULL, &errorOccurred);
+	if(errorOccurred){
+	   	val = R_NilValue;
+	}
+
+	UNPROTECT(3);
 
 	if (canCache) *canCache = FALSE; /* never let R cache these values */
 	udb->active = old;
 
 	return val;
-}
-
-static int udb_remove(const char * const name, R_ObjectTable *udb){
-	SEXP val, intern, map = (SEXP)udb->privateData;
-	Rboolean old;
-
-	if(udb->active == FALSE) return FALSE;
-	if (symExists(name,map) == FALSE) return FALSE;
-
-	old = udb->active;
-	udb->active = FALSE;
-
-	PROTECT(intern = findVarInFrame3(map,install(".intern"),TRUE));
-	if (intern == R_UnboundValue || TYPEOF(intern) != ENVSXP){
-		UNPROTECT(1);
-		warning("invalid map during remove()");
-		return FALSE;
-	}
-	val =  udb_callWithName(".remove",name,intern);
-	UNPROTECT(1);
-
-	udb->active = old;
-
-	if (IS_LOGICAL(val)) 
-		return(LOGICAL(val)[0]);
-	else 
-		warning(".remove returned illogical value.");
-	return FALSE;
 }
 
 static SEXP udb_assign(const char * const name, SEXP val, R_ObjectTable *udb){
@@ -172,10 +162,10 @@ static SEXP udb_assign(const char * const name, SEXP val, R_ObjectTable *udb){
 	}
 
 	/* fun(name,val) */
-	PROTECT(fun = findVarInFrame3(intern,install(".assign"),TRUE));
+	PROTECT(fun = findVarInFrame3(intern,install("assign"),TRUE));
 	if (fun == R_UnboundValue || TYPEOF(fun) != CLOSXP){
 		UNPROTECT(1);
-		warning(".assign not found in map.");
+		warning("assign not found in map.");
 		return R_NilValue;
 	}
 	PROTECT(e = allocVector(LANGSXP,3));
@@ -252,7 +242,6 @@ SEXP CreateUserDB(SEXP map){
 
 	udb->exists = udb_exists;
 	udb->get = udb_get;
-	udb->remove = udb_remove;
 	udb->assign = udb_assign;
 	udb->objects = udb_objects;
 
@@ -266,11 +255,8 @@ SEXP CreateUserDB(SEXP map){
 	return val;
 }
 
-SEXP UnboundValue(void){ return R_UnboundValue; }
-
 static R_CallMethodDef callMethods[]  = {
 	{"CreateUserDB", (DL_FUNC)&CreateUserDB, 1},
-	{"UnboundValue",(DL_FUNC)&UnboundValue,0},
 	{NULL, NULL, 0}
 };
 

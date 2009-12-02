@@ -1,2 +1,10 @@
-export(newMap,newMapper,install,uninstall,delete,mapAttach,mapCall,UnboundValue,mappers)
+export(newMap,newMapper,install,uninstall,mapAttach,Mappers)
+
+S3method("$",datamap)
+S3method("$<-",datamap)
+S3method(print,datamap)
+
+S3method(print,dataMapper)
+S3method(print,dataMappers)
+
 useDynLib(datamap)
