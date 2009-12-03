@@ -9,28 +9,27 @@
 	Mapper database.
 }
 \usage{
-newMapper( type=NULL, .init=NULL, .get=NULL, .assign=NULL, .delete=NULL, 
-           .finalize=NULL, ...)
+newMapper( type=NULL, init=NULL, get=NULL, assign=NULL, finalize=NULL, ...)
 }
 \arguments{
 	\item{type}{
 		Character vector length one describing the unique type
 		of foreign objects available through the new mapper.
 	}
-	\item{.init}{
+	\item{init}{
 		A function whose signature is \code{.init(map,...)} where
 		map is a new map object and \dots are those from
 		the \code{newMap} call. Returns TRUE for a successfull initialization
 		of the map object or FALSE on error.
 	}
-	\item{.get}{
+	\item{get}{
 		A function whose signature is \code{.get(symbol)} where symbol is a
 		character vector of length one defining the name of the
 		foreign object to fetch. Returns the foreign object or
 		\code{UnboundValue()}. NULL is also an acceptable value
 		for \code{.get}.
 	}
-	\item{.assign}{
+	\item{assign}{
 		A function whose signature is \code{.assign(symbol,val)}
 		where symbol is a character string of length one defining
 		the name of the foreign object to assign to and val is
@@ -38,16 +37,11 @@ newMapper( type=NULL, .init=NULL, .get=NULL, .assign=NULL, .delete=NULL,
 		requirements on the return value of \code{.assign}. NULL is
 		also an acceptable value for \code{.assign}.
 	}
-	\item{.delete}{
-		A function whose signature is \code{.delete(symbols)}
-		where symbols is a non-zero length character vector. There
-		are no requirements on \code{.delete}'s return value. NULL is
-		also an acceptable value.
-	}
-	\item{.finalize}{
-		A function whose signature is \code{'finalize()'}. There
-		are no requirements on \code{.finalize}'s return
-		value. NULL is also an acceptible value.
+	\item{finalize}{
+		A function whose signature is \code{'finalize(map)'}
+		where map is the object to finalize. There are no
+		requirements on \code{.finalize}'s return value. NULL
+		is also an acceptible value.
 	}
 	\item{\dots}{
 		Additional objects that are also added to the mapper environment. They MUST be named 
@@ -67,26 +61,35 @@ newMapper( type=NULL, .init=NULL, .get=NULL, .assign=NULL, .delete=NULL,
 # Complete example mapper
 newMapper(
 	type="EXAMPLE",
-	.init=function(map,symbols=c'example',len=3){
+	init=function(map,symbols=c('foo','bar','baz'),len=3){
 
 		# Install symbols that the users passes in from newMap().
 		lapply(symbols,install,map)
 
-		# Now let's install a len symbol in our map
-		# and also place a len variable in the map
-		install('len',map)
-		assign('len',len,internal(map))
+		# Now let's add some state to the internal portion of our map.
+		map$len <- len
 
 		# Returning FALSE means failure
 		return(TRUE)
 	},
-	.get = function(x) {
-		cat("I'll just get",x,"for you"
+	get = function(x) {
+		cat("I'll just get",x,"for you.\n")
+
+		# len is pulled from the internal portion of the map
+		# by lexical scoping rules. Anything can be returned here, but we 
+		# default to a numeric value
+		rnorm(len)
 	},
-	.assign = function(x,val) dbWriteTable(con,x,val),
-	.delete = function(x) dbRemoveTable(con,x),
-	.finalize = function() dbDisconnect(con),
-	foo <- 'bar'
+	assign = function(x,val){
+		cat("Calling assign",val,"to",x,".\n")
+	},
+	finalize = function(map){
+		cat("Finalization can clear any state, like shutting down database\n")
+		cat("connections, socket connections, etc.\n")
+	},
+
+	# The rest of the arguments are copied to the internal portion of the map.
+	foo = 'bar'
 )
 
 }

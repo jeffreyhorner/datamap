@@ -1,0 +1,96 @@
+
+R version 2.10.0 Patched (2009-12-01 r50625)
+Copyright (C) 2009 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(datamap)
+Loading required package: DBI
+> 
+> set.seed(1)
+> newMapper(
++ 	type="EXAMPLE",
++ 	init=function(map,symbols=c('foo','bar','baz'),len=3){
++ 
++ 		# Install symbols that the users passes in from newMap().
++ 		lapply(symbols,install,map)
++ 
++ 		# Now let's add some state to the internal portion of our map.
++ 		map$len <- len
++ 
++ 		# Returning FALSE means failure
++ 		return(TRUE)
++ 	},
++ 	get = function(x) {
++ 		cat("I'll just get",x,"for you.\n")
++ 
++ 		# len is pulled from the internal portion of the map
++ 		# by lexical scoping rules. Anything can be returned here, but we 
++ 		# default to a numeric value
++ 		rnorm(len)
++ 	},
++ 	assign = function(x,val){
++ 		cat("Calling assign",val,"to",x,".\n")
++ 	},
++ 	finalize = function(map){
++ 		cat("Finalization can clear any state, like shutting down database\n")
++ 		cat("connections, socket connections, etc.\n")
++ 	},
++ 
++ 	# The rest of the arguments are copied to the internal portion of the map.
++ 	foo = 'bar'
++ )
+> m <- newMap('EXAMPLE')
+> m
+$installed
+[1] "bar" "baz" "foo"
+
+$extra
+character(0)
+
+$internal
+[1] "assign"   "finalize" "foo"      "get"      "init"     "len"      ".map"    
+[8] "type"    
+
+> m[['bar']]
+I'll just get bar for you.
+[1] -0.6264538  0.1836433 -0.8356286
+> with(m,bar)
+I'll just get bar for you.
+[1]  1.5952808  0.3295078 -0.8204684
+> m$get('bar')
+I'll just get bar for you.
+[1] 0.4874291 0.7383247 0.5757814
+> with(m,x <- 'buzzle')
+> m
+$installed
+[1] "bar" "baz" "foo"
+
+$extra
+[1] "x"
+
+$internal
+[1] "assign"   "finalize" "foo"      "get"      "init"     "len"      ".map"    
+[8] "type"    
+
+> mapAttach(m)
+> baz
+I'll just get baz for you.
+[1] -0.3053884  1.5117812  0.3898432
+> rm(m)
+> foo
+I'll just get foo for you.
+[1] -0.6212406 -2.2146999  1.1249309
+> detach('datamap:EXAMPLE')
+> 

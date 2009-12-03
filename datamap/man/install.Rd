@@ -19,7 +19,6 @@
 }
 \seealso{
 	\code{\link{uninstall}}
-	\code{\link{delete}}
 }
 \keyword{programming}
 \keyword{environment}

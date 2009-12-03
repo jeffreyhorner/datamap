@@ -4,9 +4,11 @@
 `$<-.datamap` <- function(x,name,value) { x[['.intern']][[name]] <- value; x }
 
 `print.datamap` <- function(x, ...){
+	instIDX <- unlist(lapply(objects(x),bindingIsActive,x))
 	print(
 		list(
-			installed_symbols=objects(x),
+			installed=objects(x)[instIDX],
+			extra=objects(x)[!instIDX],
 			internal=objects(base::get('.intern',x),all.names=TRUE)
 		)
 	)
@@ -14,14 +16,10 @@
 
 # Global list of mappers
 Mappers <- new.env(hash=TRUE)
-class(Mappers) <- c('dataMappers',class(Mappers))
 
-print.dataMappers <- function(type){
-	if ( !missing(type) ){
-		mapper <- Mappers[[type]];
-		class(mapper) <- c('dataMapper',class(mapper))
-		return(mapper)
-	}
+x <- new.env(hash=TRUE)
+
+print.dataMappers <- function(x,...){
 	type <- character()
 	init <- get <- assign <- finalize <- logical()
 	for(mapper in objects(Mappers,all.names=TRUE)){
@@ -31,7 +29,7 @@ print.dataMappers <- function(type){
 		assign <- append(assign,exists('assign',envir=Mappers[[mapper]],inherits=FALSE))
 		finalize <- append(finalize,exists('finalize',envir=Mappers[[mapper]],inherits=FALSE))
 	}
-	data.frame(type=type,init=init,get=init,assign=assign, finalize=finalize)
+	print(data.frame(type=type,init=init,get=init,assign=assign, finalize=finalize))
 }
 
 # Inspecting mappers
@@ -81,62 +79,13 @@ newMapper <- function( type=NULL, init=NULL, get=NULL, assign=NULL, finalize=NUL
 		)
 	}
 
-	class(mapper) <- c("dataMapper",class(mapper))
 	base::assign(type,mapper,Mappers)
-	invisible(mapper)
+	class(Mappers[[type]]) <- c("dataMapper",class(Mappers[[type]]))
+	invisible(Mappers[[type]])
 }
-
-if(.Platform$OS.type != "windows") {
-
-	# A simple example of a read-only mapper for the UNIX command 'top'.
-	newMapper(
-		type="UNIX:top",
-		init= function(map){
-			# Nothing realy to do but tell datamap
-			# the name of our objects
-			install('top',map)
-			return(TRUE)
-		},
-		get = function(x){
-			con <- textConnection(system("top -b -n 1", intern=TRUE)[-1:-6])
-			on.exit(close(con))
-			read.table(con,header=TRUE)
-		}
-	)
-}
-
-newMapper(
-	type="DBI:tables",
-	init= function(map,...){
-
-		# Various initialization code
-		library(RMySQL)
-		con <- dbConnect(MySQL(),...)
-
-		# Assign persistent state into our map
-		map$con <- con
-
-		# Install symbols within our map. Note that 'install' is
-		# different than assigning state. Installed symbols become
-		# the objects visible to R
-		install(dbListTables(con),map)
-
-		# Returning FALSE means something has failed
-		return(TRUE)
-	},
-	get = function(x) {
-		if (dbExistsTable(con,x))
-			return(dbReadTable(con,x))
-		else
-			return(NULL)
-	},
-	assign = function(x,val) dbWriteTable(con,x,val),
-	finalize = function(map) dbDisconnect(con),
-	delete = function(x) dbRemoveTable(con,x)
-)
 
 # Make R CMD check shut up. Is there a better way?
-type <- NULL; get <- function(x) NULL; assign <- function(x,y) NULL
+type <- NULL;
 binderGetOnly <- function(val,sym){
 	if (!missing(val))
 		warning(paste("Assignments to",sym,"are not possible with maps of type",type,"."))

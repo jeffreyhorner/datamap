@@ -7,5 +7,6 @@ Author: Jeffrey Horner <jeffrey.horner@gmail.com>
 Maintainer: Jeffrey Horner <jeffrey.horner@gmail.com>
 Description: datamap utilizes variable bindings and objects of class
  "UserDefinedDatabase" to provide a simple mapping system to foreign objects.
+Depends: DBI
 License: GPL2
 LazyLoad: yes
